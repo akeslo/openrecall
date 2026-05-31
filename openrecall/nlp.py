@@ -51,10 +51,9 @@ def get_embedding(text: str) -> np.ndarray:
         return np.zeros(EMBEDDING_DIM, dtype=np.float32)
 
     try:
-        sentence_embeddings = model.encode(sentences)
-        # Calculate the mean embedding
-        mean_embedding = np.mean(sentence_embeddings, axis=0, dtype=np.float32)
-        return mean_embedding
+        sentence_embeddings = np.array(model.encode(sentences), dtype=np.float32)
+        mean_embedding = np.mean(sentence_embeddings, axis=0)
+        return mean_embedding.astype(np.float32)
     except Exception as e:
         logger.error(f"Error generating embedding: {e}")
         return np.zeros(EMBEDDING_DIM, dtype=np.float32)

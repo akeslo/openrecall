@@ -156,7 +156,7 @@ def record_screenshots_thread() -> None:
                     active_app_name: str = get_active_app_name() or "Unknown App"
                     active_window_title: str = get_active_window_title() or "Unknown Title"
                     insert_entry(
-                        text, timestamp, embedding, active_app_name, active_window_title, filename # Pass filename
+                        text, timestamp, embedding, active_app_name, active_window_title
                     )
 
         time.sleep(3) # Wait before taking the next screenshot
@@ -187,19 +187,20 @@ def record_screenshots_thread():
                 last_screenshots[i] = screenshot
                 image = Image.fromarray(screenshot)
                 timestamp = int(time.time())
+                filename = f"{timestamp}.webp"
                 image.save(
-                    os.path.join(screenshots_path, f"{timestamp}.webp"),
+                    os.path.join(screenshots_path, filename),
                     format="webp",
                     lossless=True,
                 )
-                text: str = extract_text_from_image(current_screenshot)
+                text: str = extract_text_from_image(screenshot)
                 # Only proceed if OCR actually extracts text
                 if text.strip():
                     embedding: np.ndarray = get_embedding(text)
                     active_app_name: str = get_active_app_name() or "Unknown App"
                     active_window_title: str = get_active_window_title() or "Unknown Title"
                     insert_entry(
-                        text, timestamp, embedding, active_app_name, active_window_title, filename # Pass filename
+                        text, timestamp, embedding, active_app_name, active_window_title
                     )
 
         time.sleep(3) # Wait before taking the next screenshot
