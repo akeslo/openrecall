@@ -75,6 +75,20 @@ To install:
 python3 -m pip install --upgrade --no-cache-dir git+https://github.com/openrecall/openrecall.git
 ```
 
+For a reproducible install (e.g. local development, or if you hit dependency
+resolution issues with the command above), clone the repo and install the
+pinned versions from `requirements.txt` first, then install OpenRecall itself:
+```
+git clone https://github.com/openrecall/openrecall.git
+cd openrecall
+python3 -m pip install -r requirements.txt
+python3 -m pip install -e .
+```
+`requirements.txt` locks the core cross-platform dependencies (Flask, torch,
+sentence-transformers, etc.) to known-good versions; OS-specific extras
+(e.g. `pyobjc` on macOS) are still installed automatically via `setup.py`'s
+`extras_require`.
+
 To run:
 ```
 python3 -m openrecall.app
