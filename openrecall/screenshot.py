@@ -112,11 +112,6 @@ def record_screenshots_thread() -> None:
     screenshots, associated OCR text, embeddings, and active application info.
     Runs in an infinite loop, intended to be executed in a separate thread.
     """
-    # TODO: Move this environment variable setting to the application's entry point.
-    # HACK: Prevents a warning/error from the huggingface/tokenizers library
-    # when used in environments where multiprocessing fork safety is a concern.
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
     last_screenshots: List[np.ndarray] = take_screenshots()
 
     while True:
