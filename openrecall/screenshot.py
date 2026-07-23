@@ -29,6 +29,7 @@ def mean_structured_similarity_index(
 
     Returns:
         The MSSIM value between the two images (float between -1 and 1).
+        Returns 1.0 if both images are identical, 0.0 if both are constant-valued.
     """
     K1, K2 = 0.01, 0.03
     C1, C2 = (K1 * L) ** 2, (K2 * L) ** 2
@@ -44,10 +45,15 @@ def mean_structured_similarity_index(
     sigma1_sq = np.var(img1_gray)
     sigma2_sq = np.var(img2_gray)
     sigma12 = np.mean((img1_gray - mu1) * (img2_gray - mu2))
-    ssim_index = ((2 * mu1 * mu2 + C1) * (2 * sigma12 + C2)) / (
-        (mu1**2 + mu2**2 + C1) * (sigma1_sq + sigma2_sq + C2)
-    )
-    return ssim_index
+
+    # Handle edge case: both images are constant-valued (zero variance)
+    denominator = (mu1**2 + mu2**2 + C1) * (sigma1_sq + sigma2_sq + C2)
+    if denominator == 0:
+        # Both constant images: return 1.0 if they're identical, 0.0 otherwise
+        return 1.0 if np.allclose(img1_gray, img2_gray) else 0.0
+
+    ssim_index = ((2 * mu1 * mu2 + C1) * (2 * sigma12 + C2)) / denominator
+    return float(np.clip(ssim_index, -1.0, 1.0))
 
 
 def is_similar(
