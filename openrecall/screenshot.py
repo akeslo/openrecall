@@ -130,10 +130,10 @@ def record_screenshots_thread() -> None:
         # Ensure we have a last_screenshot for each current_screenshot
         # This handles cases where monitor setup might change (though unlikely mid-run)
         if len(last_screenshots) != len(current_screenshots):
-             # If monitor count changes, reset last_screenshots and continue
-             last_screenshots = current_screenshots
-             time.sleep(3)
-             continue
+            # If monitor count changes, reset last_screenshots and continue
+            last_screenshots = current_screenshots
+            time.sleep(3)
+            continue
 
 
         for i, current_screenshot in enumerate(current_screenshots):

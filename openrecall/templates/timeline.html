@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+{% if timestamps|length > 0 %}
+  <div class="container">
+    <div class="slider-container">
+      <input type="range" class="slider custom-range" id="discreteSlider" min="0" max="{{timestamps|length - 1}}" step="1" value="{{timestamps|length - 1}}">
+      <div class="slider-value" id="sliderValue">{{timestamps[0] | timestamp_to_human_readable }}</div>
+    </div>
+    <div class="image-container">
+      <img id="timestampImage" src="/static/{{timestamps[0]}}_0.webp" alt="Image for timestamp">
+    </div>
+  </div>
+  <script>
+    const timestamps = {{ timestamps|tojson }};
+    const slider = document.getElementById('discreteSlider');
+    const sliderValue = document.getElementById('sliderValue');
+    const timestampImage = document.getElementById('timestampImage');
+
+    slider.addEventListener('input', function() {
+      const reversedIndex = timestamps.length - 1 - slider.value;
+      const timestamp = timestamps[reversedIndex];
+      sliderValue.textContent = new Date(timestamp * 1000).toLocaleString();  // Convert to human-readable format
+      timestampImage.src = `/static/${timestamp}_0.webp`;
+    });
+
+    // Initialize the slider with a default value
+    slider.value = timestamps.length - 1;
+    sliderValue.textContent = new Date(timestamps[0] * 1000).toLocaleString();  // Convert to human-readable format
+    timestampImage.src = `/static/${timestamps[0]}_0.webp`;
+  </script>
+{% else %}
+  <div class="container">
+      <div class="alert alert-info" role="alert">
+          Nothing recorded yet, wait a few seconds.
+      </div>
+  </div>
+{% endif %}
+{% endblock %}
