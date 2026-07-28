@@ -96,6 +96,27 @@ python3 -m openrecall.app
 Open your browser to:
 [http://localhost:8082](http://localhost:8082) to access OpenRecall.
 
+### Local Development and Testing
+
+To set up a development environment and run the test suite:
+
+```
+git clone https://github.com/openrecall/openrecall.git
+cd openrecall
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e ".[python-doctr]"  # Include optional OCR support for testing
+pip install pytest
+pytest tests/
+```
+
+To regenerate the lockfile after editing `setup.py`'s dependencies:
+```
+pip install pip-tools
+pip-compile --output-file=requirements.txt setup.py
+```
+
 ## Arguments
 `--storage-path` (default: user data path for your OS): allows you to specify the path where the screenshots and database should be stored. We recommend [creating an encrypted volume](docs/encryption.md) to store your data.
 

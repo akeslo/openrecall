@@ -1,10 +1,16 @@
-from doctr.models import ocr_predictor
+try:
+    from doctr.models import ocr_predictor
 
-ocr = ocr_predictor(
-    pretrained=True,
-    det_arch="db_mobilenet_v3_large",
-    reco_arch="crnn_mobilenet_v3_large",
-)
+    ocr = ocr_predictor(
+        pretrained=True,
+        det_arch="db_mobilenet_v3_large",
+        reco_arch="crnn_mobilenet_v3_large",
+    )
+except ImportError as e:
+    raise ImportError(
+        "python-doctr is required for OCR functionality. "
+        "Install it with: pip install -e '.[python-doctr]'"
+    ) from e
 
 
 def extract_text_from_image(image):
