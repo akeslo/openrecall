@@ -84,6 +84,12 @@ cd openrecall
 python3 -m pip install -r requirements.txt
 python3 -m pip install -e .
 ```
+
+The **Semantic Search** feature (below) depends on OCR, which is an optional
+extra — install it with `pip install -e ".[python-doctr]"` instead of the
+plain `-e .` above. Without it, OCR text extraction raises an `ImportError`
+at startup rather than working silently in a degraded mode.
+
 `requirements.txt` locks the core cross-platform dependencies (Flask, torch,
 sentence-transformers, etc.) to known-good versions; OS-specific extras
 (e.g. `pyobjc` on macOS) are still installed automatically via `setup.py`'s
