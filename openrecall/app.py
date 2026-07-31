@@ -23,9 +23,15 @@ app.jinja_env.filters["timestamp_to_human_readable"] = timestamp_to_human_readab
 
 @app.route("/")
 def timeline():
-    # connect to db
-    timestamps = get_timestamps()
-    return render_template("timeline.html", timestamps=timestamps)
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        # connect to db
+        timestamps = get_timestamps()
+        return render_template("timeline.html", timestamps=timestamps)
+    except Exception as e:
+        logger.error(f"Error fetching timeline: {e}")
+        return render_template("timeline.html", timestamps=[]), 500
 
 
 @app.route("/search")
@@ -55,7 +61,13 @@ def search():
 
 @app.route("/static/<filename>")
 def serve_image(filename):
-    return send_from_directory(screenshots_path, filename)
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        return send_from_directory(screenshots_path, filename)
+    except Exception as e:
+        logger.error(f"Error serving image '{filename}': {e}")
+        return {"error": "File not found"}, 404
 
 
 if __name__ == "__main__":
