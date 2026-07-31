@@ -31,14 +31,26 @@ def timeline():
 @app.route("/search")
 def search():
     q = request.args.get("q")
-    entries = get_all_entries()
-    embeddings = [entry.embedding for entry in entries]
-    query_embedding = get_embedding(q)
-    similarities = [cosine_similarity(query_embedding, emb) for emb in embeddings]
-    indices = np.argsort(similarities)[::-1]
-    sorted_entries = [entries[i] for i in indices]
 
-    return render_template("search_results.html", entries=sorted_entries)
+    # Validate input
+    if q is None or (isinstance(q, str) and not q.strip()):
+        return render_template("search_results.html", entries=[])
+
+    try:
+        entries = get_all_entries()
+        embeddings = [entry.embedding for entry in entries]
+        query_embedding = get_embedding(q)
+        similarities = [cosine_similarity(query_embedding, emb) for emb in embeddings]
+        indices = np.argsort(similarities)[::-1]
+        sorted_entries = [entries[i] for i in indices]
+
+        return render_template("search_results.html", entries=sorted_entries)
+    except Exception as e:
+        # Log the error and return empty results on failure
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error during search for query '{q}': {e}")
+        return render_template("search_results.html", entries=[]), 500
 
 
 @app.route("/static/<filename>")
