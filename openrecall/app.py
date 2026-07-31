@@ -1,4 +1,5 @@
 import os
+import logging
 from threading import Thread
 
 import numpy as np
@@ -13,6 +14,9 @@ from openrecall.utils import human_readable_time, timestamp_to_human_readable
 # Set environment variable early to prevent tokenizers warnings in multiprocessing contexts
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
 # Get the path to the templates directory
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 app = Flask(__name__, template_folder=template_dir)
@@ -23,8 +27,6 @@ app.jinja_env.filters["timestamp_to_human_readable"] = timestamp_to_human_readab
 
 @app.route("/")
 def timeline():
-    import logging
-    logger = logging.getLogger(__name__)
     try:
         # connect to db
         timestamps = get_timestamps()
@@ -53,16 +55,12 @@ def search():
         return render_template("search_results.html", entries=sorted_entries)
     except Exception as e:
         # Log the error and return empty results on failure
-        import logging
-        logger = logging.getLogger(__name__)
         logger.error(f"Error during search for query '{q}': {e}")
         return render_template("search_results.html", entries=[]), 500
 
 
 @app.route("/static/<filename>")
 def serve_image(filename):
-    import logging
-    logger = logging.getLogger(__name__)
     try:
         return send_from_directory(screenshots_path, filename)
     except Exception as e:
@@ -73,7 +71,7 @@ def serve_image(filename):
 if __name__ == "__main__":
     create_db()
 
-    print(f"Appdata folder: {appdata_folder}")
+    logger.info(f"Appdata folder: {appdata_folder}")
 
     # Start the thread to record screenshots
     t = Thread(target=record_screenshots_thread)

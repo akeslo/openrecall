@@ -1,9 +1,13 @@
 import sqlite3
 from collections import namedtuple
+import logging
 import numpy as np
 from typing import Any, List, Optional, Tuple
 
 from openrecall.config import db_path
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Define the structure of a database entry using namedtuple
 Entry = namedtuple("Entry", ["id", "app", "title", "text", "timestamp", "embedding"])
@@ -35,7 +39,7 @@ def create_db() -> None:
             )
             conn.commit()
     except sqlite3.Error as e:
-        print(f"Database error during table creation: {e}")
+        logger.error(f"Database error during table creation: {e}")
 
 
 def get_all_entries() -> List[Entry]:
@@ -67,7 +71,7 @@ def get_all_entries() -> List[Entry]:
                     )
                 )
     except sqlite3.Error as e:
-        print(f"Database error while fetching all entries: {e}")
+        logger.error(f"Database error while fetching all entries: {e}")
     return entries
 
 
@@ -88,7 +92,7 @@ def get_timestamps() -> List[int]:
             results = cursor.fetchall()
             timestamps = [result[0] for result in results]
     except sqlite3.Error as e:
-        print(f"Database error while fetching timestamps: {e}")
+        logger.error(f"Database error while fetching timestamps: {e}")
     return timestamps
 
 
@@ -129,5 +133,5 @@ def insert_entry(
 
     except sqlite3.Error as e:
         # More specific error handling can be added (e.g., IntegrityError for UNIQUE constraint)
-        print(f"Database error during insertion: {e}")
+        logger.error(f"Database error during insertion: {e}")
     return last_row_id

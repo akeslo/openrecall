@@ -1,10 +1,14 @@
 import os
 import time
+import logging
 from typing import List, Tuple
 
 import mss
 import numpy as np
 from PIL import Image
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 from openrecall.config import screenshots_path, args
 from openrecall.database import insert_entry
@@ -105,7 +109,7 @@ def take_screenshots() -> List[np.ndarray]:
                 # Handle case where primary_monitor_only is True but only one monitor exists (all monitors view)
                 # This case might need specific handling depending on desired behavior.
                 # For now, we just skip if the index is out of bounds.
-                print(f"Warning: Monitor index {i} out of bounds. Skipping.")
+                logger.warning(f"Monitor index {i} out of bounds. Skipping.")
 
     return screenshots
 

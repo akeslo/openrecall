@@ -1,6 +1,10 @@
 import sys
 import datetime
 import re
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Platform-specific imports with error handling
 try:
@@ -123,7 +127,7 @@ def get_active_window_title_osx() -> str:
         # Fallback if no suitable window title found for the active app
         return ""
     except Exception as e:
-        print(f"Error getting macOS window title: {e}")
+        logger.error(f"Error getting macOS window title: {e}")
         return ""
 
 
@@ -166,7 +170,7 @@ def get_active_window_title_windows() -> str:
             return ""
         return win32gui.GetWindowText(hwnd)
     except Exception as e:
-        print(f"Error getting Windows window title: {e}")
+        logger.error(f"Error getting Windows window title: {e}")
         return ""
 
 
@@ -181,7 +185,7 @@ def get_active_app_name_linux() -> str:
         unavailable or on error. Requires 'xprop' utility.
     """
     if subprocess is None:
-        print("Warning: 'subprocess' module not available for Linux app name check.")
+        logger.warning("Warning: 'subprocess' module not available for Linux app name check.")
         return ""
     try:
         # Get active window ID
@@ -189,12 +193,12 @@ def get_active_app_name_linux() -> str:
         active_window_proc = subprocess.Popen(active_window_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = active_window_proc.communicate(timeout=1)
         if active_window_proc.returncode != 0:
-            print(f"Error running xprop for active window: {stderr.decode()}")
+            logger.error(f"Error running xprop for active window: {stderr.decode()}")
             return ""
 
         match = re.search(rb'window id # (0x[0-9a-fA-F]+)', stdout)
         if not match:
-            print("Could not find active window ID using xprop.")
+            logger.error("Could not find active window ID using xprop.")
             return ""
         window_id = match.group(1).decode('utf-8')
 
@@ -203,7 +207,7 @@ def get_active_app_name_linux() -> str:
         wm_class_proc = subprocess.Popen(wm_class_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = wm_class_proc.communicate(timeout=1)
         if wm_class_proc.returncode != 0:
-            print(f"Error running xprop for WM_CLASS: {stderr.decode()}")
+            logger.error(f"Error running xprop for WM_CLASS: {stderr.decode()}")
             return ""
 
         # WM_CLASS(STRING) = "instance", "class"
@@ -214,17 +218,17 @@ def get_active_app_name_linux() -> str:
             # class_name = match.group(2).decode('utf-8') if match.group(2) else None
             return instance
         else:
-            print(f"Could not parse WM_CLASS for window ID {window_id}.")
+            logger.error(f"Could not parse WM_CLASS for window ID {window_id}.")
             return ""
 
     except FileNotFoundError:
-        print("Error: 'xprop' command not found. Please install xprop.")
+        logger.error("Error: xprop command not found. Please install xprop.")
         return ""
     except subprocess.TimeoutExpired:
-        print("Error: 'xprop' command timed out.")
+        logger.error("Error: xprop command timed out.")
         return ""
     except Exception as e:
-        print(f"Error getting Linux app name: {e}")
+        logger.error(f"Error getting Linux app name: {e}")
         return ""
 
 
@@ -239,7 +243,7 @@ def get_active_window_title_linux() -> str:
         Requires 'xprop' utility.
     """
     if subprocess is None:
-        print("Warning: 'subprocess' module not available for Linux window title check.")
+        logger.warning("Warning: 'subprocess' module not available for Linux window title check.")
         return ""
     try:
         # Get active window ID
@@ -247,12 +251,12 @@ def get_active_window_title_linux() -> str:
         active_window_proc = subprocess.Popen(active_window_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = active_window_proc.communicate(timeout=1)
         if active_window_proc.returncode != 0:
-            print(f"Error running xprop for active window: {stderr.decode()}")
+            logger.error(f"Error running xprop for active window: {stderr.decode()}")
             return ""
 
         match = re.search(rb'window id # (0x[0-9a-fA-F]+)', stdout)
         if not match:
-            print("Could not find active window ID using xprop.")
+            logger.error("Could not find active window ID using xprop.")
             return ""
         window_id = match.group(1).decode('utf-8')
 
@@ -275,17 +279,17 @@ def get_active_window_title_linux() -> str:
                     return title
 
         # If neither property provided a title
-        print(f"Could not find window title for window ID {window_id}.")
+        logger.error(f"Could not find window title for window ID {window_id}.")
         return ""
 
     except FileNotFoundError:
-        print("Error: 'xprop' command not found. Please install xprop.")
+        logger.error("Error: xprop command not found. Please install xprop.")
         return ""
     except subprocess.TimeoutExpired:
-        print("Error: 'xprop' command timed out.")
+        logger.error("Error: xprop command timed out.")
         return ""
     except Exception as e:
-        print(f"Error getting Linux window title: {e}")
+        logger.error(f"Error getting Linux window title: {e}")
         return ""
     
 def get_active_app_name() -> str:
@@ -319,7 +323,7 @@ def get_active_window_title() -> str:
     elif sys.platform.startswith("linux"):
         return get_active_window_title_linux()
     else:
-        print("Warning: Active window title retrieval not implemented for this platform.")
+        logger.warning("Warning: Active window title retrieval not implemented for this platform.")
         raise NotImplementedError(f"Platform '{sys.platform}' not supported yet for get_active_window_title")
 
 
@@ -334,7 +338,7 @@ def is_user_active_osx() -> bool:
         if the check fails for any reason.
     """
     if subprocess is None:
-        print("Warning: 'subprocess' module not available, assuming user is active.")
+        logger.warning("Warning: 'subprocess' module not available, assuming user is active.")
         return True
     try:
         # Run the 'ioreg' command to get idle time information
@@ -357,18 +361,18 @@ def is_user_active_osx() -> bool:
 
         # If "HIDIdleTime" is not found (e.g., screen locked), assume inactive?
         # Or assume active as a fallback? Let's assume active for now.
-        print("Warning: Could not find HIDIdleTime in ioreg output.")
+        logger.warning("Warning: Could not find HIDIdleTime in ioreg output.")
         return True
 
     except subprocess.TimeoutExpired:
-        print("Warning: 'ioreg' command timed out, assuming user is active.")
+        logger.warning("Warning: 'ioreg' command timed out, assuming user is active.")
         return True
     except subprocess.CalledProcessError as e:
         # This might happen if the class IOHIDSystem is not found, etc.
-        print(f"Warning: 'ioreg' command failed ({e}), assuming user is active.")
+        logger.error(f"Warning: 'ioreg' command failed ({e}), assuming user is active.")
         return True
     except Exception as e:
-        print(f"An error occurred during macOS idle check: {e}")
+        logger.error(f"An error occurred during macOS idle check: {e}")
         # Fallback: assume the user is active
         return True
 
@@ -384,7 +388,7 @@ def is_user_active_windows() -> bool:
         if the check fails.
     """
     if win32api is None:
-        print("Warning: 'win32api' module not available, assuming user is active.")
+        logger.warning("Warning: 'win32api' module not available, assuming user is active.")
         return True
     try:
         last_input_info = win32api.GetLastInputInfo()
@@ -394,7 +398,7 @@ def is_user_active_windows() -> bool:
         idle_seconds = idle_milliseconds / 1000.0
         return idle_seconds < 5.0
     except Exception as e:
-        print(f"An error occurred during Windows idle check: {e}")
+        logger.error(f"An error occurred during Windows idle check: {e}")
         # Fallback: assume the user is active
         return True
 
@@ -410,7 +414,7 @@ def is_user_active_linux() -> bool:
         Returns True if the check fails or 'xprintidle' is not available.
     """
     if subprocess is None:
-        print("Warning: 'subprocess' module not available for Linux idle check.")
+        logger.warning("Warning: 'subprocess' module not available for Linux idle check.")
         return True # Assume active if module missing
     try:
         # Run xprintidle to get idle time in milliseconds
@@ -419,16 +423,16 @@ def is_user_active_linux() -> bool:
         idle_seconds = idle_milliseconds / 1000.0
         return idle_seconds < 5.0
     except FileNotFoundError:
-        print("Warning: 'xprintidle' command not found. Please install xprintidle to check user activity.")
+        logger.warning("Warning: 'xprintidle' command not found. Please install xprintidle to check user activity.")
         return True # Assume active if command missing
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-        print(f"Warning: Could not check Linux idle time ({e}), assuming user is active.")
+        logger.error(f"Warning: Could not check Linux idle time ({e}), assuming user is active.")
         return True
     except ValueError as e:
-        print(f"Warning: Could not parse output of xprintidle ('{output.strip()}'): {e}, assuming user is active.")
+        logger.error(f"Warning: Could not parse output of xprintidle ('{output.strip()}'): {e}, assuming user is active.")
         return True
     except Exception as e:
-        print(f"An error occurred during Linux idle check: {e}")
+        logger.error(f"An error occurred during Linux idle check: {e}")
         return True # Assume active on other errors
 
 
@@ -449,5 +453,5 @@ def is_user_active() -> bool:
     elif sys.platform.startswith("linux"):
         return is_user_active_linux()
     else:
-        print(f"Warning: User active check not supported for platform '{sys.platform}', assuming active.")
+        logger.error(f"Warning: User active check not supported for platform '{sys.platform}', assuming active.")
         raise NotImplementedError(f"Platform '{sys.platform}' not supported yet for is_user_active")
