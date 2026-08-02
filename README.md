@@ -92,8 +92,8 @@ at startup rather than working silently in a degraded mode.
 
 `requirements.txt` locks the core cross-platform dependencies (Flask, torch,
 sentence-transformers, etc.) to known-good versions; OS-specific extras
-(e.g. `pyobjc` on macOS) are still installed automatically via `setup.py`'s
-`extras_require`.
+(e.g. `pyobjc` on macOS) are still installed automatically via
+`pyproject.toml`'s `[project.optional-dependencies]`.
 
 To run:
 ```
@@ -117,10 +117,12 @@ pip install pytest
 pytest tests/
 ```
 
-To regenerate the lockfile after editing `setup.py`'s dependencies:
+To regenerate the lockfile after editing `pyproject.toml`'s `dependencies`
+(`pyproject.toml` is the single source of truth; `setup.py` is only a
+backward-compat shim):
 ```
 pip install pip-tools
-pip-compile --output-file=requirements.txt setup.py
+pip-compile --output-file=requirements.txt pyproject.toml
 ```
 
 ## Arguments

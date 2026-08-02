@@ -3,7 +3,11 @@ from sentence_transformers import SentenceTransformer
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+# NOTE: deliberately no logging.basicConfig() here. This is library code, and
+# calling basicConfig() at import time installs a root handler in whatever
+# process imports openrecall, overriding the host application's own logging
+# setup. Every other module in this package only calls getLogger(__name__);
+# configuring handlers is the entry point's job.
 logger = logging.getLogger(__name__)
 
 # Constants

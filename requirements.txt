@@ -1,18 +1,18 @@
 # Lockfile for OpenRecall's cross-platform base dependencies.
 #
-# Generated with pip-tools (pip-compile) against the base `install_requires`
-# entries in setup.py (excludes OS-specific extras_require: windows/macos/
-# linux/python-doctr). Resolved on Python 3.12 / macOS (arm64); pin versions
-# may differ on other platforms/Python versions if you regenerate.
+# Generated with pip-tools (pip-compile) against the base `dependencies`
+# entries in pyproject.toml (excludes the OS-specific optional-dependencies:
+# windows/macos/linux/python-doctr). Resolved on Python 3.12 / macOS (arm64);
+# pin versions may differ on other platforms/Python versions if you regenerate.
 #
-# To regenerate after editing setup.py's install_requires:
+# To regenerate after editing pyproject.toml's [project] dependencies:
 #   python3 -m venv .venv && source .venv/bin/activate
 #   pip install pip-tools
-#   pip-compile --output-file=requirements.txt setup.py
-#   (pip-compile reads install_requires directly from setup.py; the
-#   OS-specific extras below are intentionally left out of this lockfile —
-#   install those via `pip install -e ".[macos]"` / ".[windows]"` / etc.
-#   as documented in README.md)
+#   pip-compile --output-file=requirements.txt pyproject.toml
+#   (pyproject.toml is the single source of truth for dependencies; setup.py
+#   is only a backward-compat shim. The optional extras are intentionally left
+#   out of this lockfile — install those via `pip install -e ".[macos]"` /
+#   ".[windows]"` / etc. as documented in README.md)
 #
 # Install with: pip install -r requirements.txt
 #

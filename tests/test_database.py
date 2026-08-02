@@ -184,6 +184,48 @@ class TestDatabase(unittest.TestCase):
         # Timestamps should be ordered DESC
         self.assertEqual(timestamps, [ts2, ts1, ts3])
 
+    def test_get_all_entries_skips_null_embedding(self):
+        """A NULL embedding must be skipped, not abort the whole fetch."""
+        ts_good = int(time.time())
+        ts_null = ts_good - 10
+        emb = np.array([0.1] * 5, dtype=np.float32)
+
+        insert_entry("Good", ts_good, emb, "AppGood", "TitleGood")
+
+        # Insert a row with a NULL embedding directly — np.frombuffer(None)
+        # raises TypeError, which is not a sqlite3.Error.
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "INSERT INTO entries (text, timestamp, embedding, app, title) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("Null", ts_null, None, "AppNull", "TitleNull"),
+        )
+        self.conn.commit()
+
+        entries = get_all_entries()
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].text, "Good")
+
+    def test_get_all_entries_skips_empty_embedding(self):
+        """An empty embedding blob must be skipped rather than returned."""
+        ts_good = int(time.time()) + 100
+        ts_empty = ts_good - 10
+        emb = np.array([0.1] * 5, dtype=np.float32)
+
+        insert_entry("Good", ts_good, emb, "AppGood", "TitleGood")
+
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "INSERT INTO entries (text, timestamp, embedding, app, title) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("Empty", ts_empty, b"", "AppEmpty", "TitleEmpty"),
+        )
+        self.conn.commit()
+
+        entries = get_all_entries()
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].text, "Good")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -58,8 +58,28 @@ def get_all_entries() -> List[Entry]:
             cursor.execute("SELECT id, app, title, text, timestamp, embedding FROM entries ORDER BY timestamp DESC")
             results = cursor.fetchall()
             for row in results:
-                # Deserialize the embedding blob back into a NumPy array
-                embedding = np.frombuffer(row["embedding"], dtype=np.float32) # Assuming float32, adjust if needed
+                # Deserialize the embedding blob back into a NumPy array.
+                # A NULL or truncated blob raises TypeError/ValueError, neither
+                # of which is a sqlite3.Error — without this guard one bad row
+                # aborts the whole fetch and 500s the search page.
+                raw_embedding = row["embedding"]
+                if raw_embedding is None:
+                    logger.warning(
+                        f"Skipping entry {row['id']}: embedding is NULL."
+                    )
+                    continue
+                try:
+                    embedding = np.frombuffer(raw_embedding, dtype=np.float32)
+                except (TypeError, ValueError) as e:
+                    logger.warning(
+                        f"Skipping entry {row['id']}: unreadable embedding blob ({e})."
+                    )
+                    continue
+                if embedding.size == 0:
+                    logger.warning(
+                        f"Skipping entry {row['id']}: embedding is empty."
+                    )
+                    continue
                 entries.append(
                     Entry(
                         id=row["id"],
