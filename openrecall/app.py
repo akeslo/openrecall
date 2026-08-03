@@ -47,12 +47,28 @@ def search():
         return render_template("search_results.html", entries=[])
 
     try:
-        entries = get_all_entries()
-        embeddings = [entry.embedding for entry in entries]
         query_embedding = get_embedding(q)
-        similarities = [cosine_similarity(query_embedding, emb) for emb in embeddings]
+
+        # Only compare entries whose embedding has the same dimension as the
+        # query. cosine_similarity() does a bare np.dot, so a single row left
+        # over from a different embedding model raises ValueError here — and
+        # the except below would turn that into an empty result page for
+        # *every* query, silently and permanently, until that row is deleted.
+        comparable = []
+        for entry in get_all_entries():
+            if entry.embedding.shape != query_embedding.shape:
+                logger.warning(
+                    f"Skipping entry {entry.id} in search: embedding has shape "
+                    f"{entry.embedding.shape}, query has {query_embedding.shape}."
+                )
+                continue
+            comparable.append(entry)
+
+        similarities = [
+            cosine_similarity(query_embedding, entry.embedding) for entry in comparable
+        ]
         indices = np.argsort(similarities)[::-1]
-        sorted_entries = [entries[i] for i in indices]
+        sorted_entries = [comparable[i] for i in indices]
 
         return render_template("search_results.html", entries=sorted_entries)
     except Exception as e:
