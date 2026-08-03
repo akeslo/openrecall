@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import logging
 
 parser = argparse.ArgumentParser(description="OpenRecall")
 
@@ -48,6 +49,12 @@ else:
 
 if not os.path.exists(screenshots_path):
     try:
-        os.makedirs(screenshots_path)
-    except:
-        pass
+        os.makedirs(screenshots_path, exist_ok=True)
+    except OSError as e:
+        # Do not swallow this silently: without this directory every
+        # image.save() in the recorder thread fails, and a bare `except: pass`
+        # here turns a one-line permissions/disk problem into "recording just
+        # stopped working and nothing said why".
+        logging.getLogger(__name__).error(
+            f"Could not create screenshots directory '{screenshots_path}': {e}"
+        )

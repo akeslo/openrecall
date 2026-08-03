@@ -1,5 +1,7 @@
 import os
+import re
 import logging
+from glob import glob
 from threading import Thread
 
 import numpy as np
@@ -59,9 +61,32 @@ def search():
         return render_template("search_results.html", entries=[]), 500
 
 
+def _monitor_fallback(filename):
+    """Find another monitor's capture for the same timestamp.
+
+    The timeline and search templates always request `<timestamp>_0.webp`, but
+    with `--primary-monitor-only` off, a capture may only exist for a secondary
+    monitor (`<timestamp>_1.webp`, ...). Without this fallback those entries
+    show up in the UI as permanently broken images.
+
+    Returns the substitute filename, or None. The strict pattern match also
+    keeps this from being a path-traversal helper.
+    """
+    match = re.fullmatch(r"(\d+)_\d+\.webp", filename)
+    if not match:
+        return None
+    candidates = sorted(glob(os.path.join(screenshots_path, f"{match.group(1)}_*.webp")))
+    return os.path.basename(candidates[0]) if candidates else None
+
+
 @app.route("/static/<filename>")
 def serve_image(filename):
     try:
+        if not os.path.isfile(os.path.join(screenshots_path, filename)):
+            alternative = _monitor_fallback(filename)
+            if alternative:
+                logger.info(f"Serving '{alternative}' in place of missing '{filename}'.")
+                return send_from_directory(screenshots_path, alternative)
         return send_from_directory(screenshots_path, filename)
     except Exception as e:
         logger.error(f"Error serving image '{filename}': {e}")

@@ -122,46 +122,57 @@ def record_screenshots_thread() -> None:
     screenshots, associated OCR text, embeddings, and active application info.
     Runs in an infinite loop, intended to be executed in a separate thread.
     """
-    last_screenshots: List[np.ndarray] = take_screenshots()
+    try:
+        last_screenshots: List[np.ndarray] = take_screenshots()
+    except Exception as e:
+        logger.error(f"Initial screen capture failed: {e}")
+        last_screenshots = []
 
     while True:
-        if not is_user_active():
-            time.sleep(3)  # Wait longer if user is inactive
-            continue
+        # Every iteration is wrapped: this loop is the whole recording feature,
+        # and it runs on a background thread nobody supervises. An unhandled
+        # error here (display disconnected, disk full, OCR or DB failure) used
+        # to kill the thread outright while the Flask app kept serving happily,
+        # so recording stopped permanently and silently. Log it and keep going.
+        try:
+            if not is_user_active():
+                time.sleep(3)  # Wait longer if user is inactive
+                continue
 
-        current_screenshots: List[np.ndarray] = take_screenshots()
+            current_screenshots: List[np.ndarray] = take_screenshots()
 
-        # Ensure we have a last_screenshot for each current_screenshot
-        # This handles cases where monitor setup might change (though unlikely mid-run)
-        if len(last_screenshots) != len(current_screenshots):
-            # If monitor count changes, reset last_screenshots and continue
-            last_screenshots = current_screenshots
-            time.sleep(3)
-            continue
+            # Ensure we have a last_screenshot for each current_screenshot
+            # This handles cases where monitor setup might change (though unlikely mid-run)
+            if len(last_screenshots) != len(current_screenshots):
+                # If monitor count changes, reset last_screenshots and continue
+                last_screenshots = current_screenshots
+                time.sleep(3)
+                continue
 
+            for i, current_screenshot in enumerate(current_screenshots):
+                last_screenshot = last_screenshots[i]
 
-        for i, current_screenshot in enumerate(current_screenshots):
-            last_screenshot = last_screenshots[i]
-
-            if not is_similar(current_screenshot, last_screenshot):
-                last_screenshots[i] = current_screenshot  # Update the last screenshot for this monitor
-                image = Image.fromarray(current_screenshot)
-                timestamp = int(time.time())
-                filename = f"{timestamp}_{i}.webp" # Add monitor index to filename for uniqueness
-                filepath = os.path.join(screenshots_path, filename)
-                image.save(
-                    filepath,
-                    format="webp",
-                    lossless=True,
-                )
-                text: str = extract_text_from_image(current_screenshot)
-                # Only proceed if OCR actually extracts text
-                if text.strip():
-                    embedding: np.ndarray = get_embedding(text)
-                    active_app_name: str = get_active_app_name() or "Unknown App"
-                    active_window_title: str = get_active_window_title() or "Unknown Title"
-                    insert_entry(
-                        text, timestamp, embedding, active_app_name, active_window_title
+                if not is_similar(current_screenshot, last_screenshot):
+                    last_screenshots[i] = current_screenshot  # Update the last screenshot for this monitor
+                    image = Image.fromarray(current_screenshot)
+                    timestamp = int(time.time())
+                    filename = f"{timestamp}_{i}.webp" # Add monitor index to filename for uniqueness
+                    filepath = os.path.join(screenshots_path, filename)
+                    image.save(
+                        filepath,
+                        format="webp",
+                        lossless=True,
                     )
+                    text: str = extract_text_from_image(current_screenshot)
+                    # Only proceed if OCR actually extracts text
+                    if text.strip():
+                        embedding: np.ndarray = get_embedding(text)
+                        active_app_name: str = get_active_app_name() or "Unknown App"
+                        active_window_title: str = get_active_window_title() or "Unknown Title"
+                        insert_entry(
+                            text, timestamp, embedding, active_app_name, active_window_title
+                        )
+        except Exception as e:
+            logger.error(f"Error in screenshot recording loop: {e}", exc_info=True)
 
         time.sleep(3) # Wait before taking the next screenshot

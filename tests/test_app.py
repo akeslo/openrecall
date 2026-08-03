@@ -122,6 +122,30 @@ def test_serve_image_missing_file_returns_404(client, tmp_path):
     assert response.status_code == 404
 
 
+def test_serve_image_falls_back_to_another_monitor(client, tmp_path):
+    """The templates always ask for `_0.webp`; a secondary-monitor-only capture
+    must still render instead of showing a broken image."""
+    (tmp_path / "1700000000_1.webp").write_bytes(b"secondary-monitor")
+    with mock.patch.object(app_module, "screenshots_path", str(tmp_path)):
+        response = client.get("/static/1700000000_0.webp")
+    assert response.status_code == 200
+    assert response.data == b"secondary-monitor"
+
+
+def test_serve_image_fallback_does_not_cross_timestamps(client, tmp_path):
+    (tmp_path / "1700000999_1.webp").write_bytes(b"different-moment")
+    with mock.patch.object(app_module, "screenshots_path", str(tmp_path)):
+        response = client.get("/static/1700000000_0.webp")
+    assert response.status_code == 404
+
+
+def test_serve_image_fallback_ignores_non_capture_names(client, tmp_path):
+    (tmp_path / "1700000000_1.webp").write_bytes(b"secondary-monitor")
+    with mock.patch.object(app_module, "screenshots_path", str(tmp_path)):
+        response = client.get("/static/notatimestamp.webp")
+    assert response.status_code == 404
+
+
 def test_serve_image_rejects_path_traversal(client, tmp_path):
     secret = tmp_path / "secret.txt"
     secret.write_text("classified")

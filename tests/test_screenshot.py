@@ -117,3 +117,48 @@ def test_take_screenshots_skips_out_of_bounds_index():
 
     assert result == []
     fake_sct.grab.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# record_screenshots_thread resilience
+# ---------------------------------------------------------------------------
+
+def test_record_loop_survives_a_capture_failure():
+    """One bad iteration must not kill the recording thread.
+
+    The loop runs unsupervised on a background thread; before it caught its own
+    exceptions, a single failure (display change, disk error, OCR blowup) ended
+    recording permanently while the web app carried on serving stale data.
+    """
+    calls = {"n": 0}
+
+    def flaky_take_screenshots():
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("display disconnected")
+        if calls["n"] >= 4:
+            raise KeyboardInterrupt  # break out of the infinite loop
+        return [np.zeros((4, 4, 3), dtype=np.uint8)]
+
+    with mock.patch.object(screenshot, "take_screenshots", flaky_take_screenshots), \
+         mock.patch.object(screenshot, "is_user_active", return_value=True), \
+         mock.patch.object(screenshot, "time") as fake_time:
+        fake_time.sleep.return_value = None
+        fake_time.time.return_value = 1700000000
+        with pytest.raises(KeyboardInterrupt):
+            screenshot.record_screenshots_thread()
+
+    # It kept iterating past the failure on call 2 rather than dying there.
+    assert calls["n"] >= 4
+
+
+def test_record_loop_survives_initial_capture_failure():
+    def always_fails():
+        raise RuntimeError("no display")
+
+    with mock.patch.object(screenshot, "take_screenshots", always_fails), \
+         mock.patch.object(screenshot, "is_user_active", side_effect=KeyboardInterrupt), \
+         mock.patch.object(screenshot, "time") as fake_time:
+        fake_time.sleep.return_value = None
+        with pytest.raises(KeyboardInterrupt):
+            screenshot.record_screenshots_thread()
