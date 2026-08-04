@@ -51,15 +51,21 @@ def human_readable_time(timestamp: int) -> str:
     """
     now = datetime.datetime.now()
     dt_object = datetime.datetime.fromtimestamp(timestamp)
-    diff = now - dt_object
-    if diff.days > 0:
-        return f"{diff.days} days ago"
-    elif diff.seconds < 60:
-        return f"{diff.seconds} seconds ago"
-    elif diff.seconds < 3600:
-        return f"{diff.seconds // 60} minutes ago"
-    else:
-        return f"{diff.seconds // 3600} hours ago"
+    # Work in total seconds, not timedelta.days/.seconds. For a timestamp in
+    # the future (clock skew, a DST shift, an entry written by another machine)
+    # the timedelta normalizes to days=-1 with a large positive .seconds, so the
+    # old branch order rendered a future capture as "23 hours ago".
+    total_seconds = int((now - dt_object).total_seconds())
+    if total_seconds < 0:
+        return "just now"
+    if total_seconds < 60:
+        return f"{total_seconds} seconds ago"
+    if total_seconds < 3600:
+        return f"{total_seconds // 60} minutes ago"
+    if total_seconds < 86400:
+        return f"{total_seconds // 3600} hours ago"
+    days = total_seconds // 86400
+    return f"{days} day{'s' if days != 1 else ''} ago"
 
 
 def timestamp_to_human_readable(timestamp: int) -> str:

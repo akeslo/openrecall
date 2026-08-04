@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import mss
 import numpy as np
@@ -114,6 +114,33 @@ def take_screenshots() -> List[np.ndarray]:
     return screenshots
 
 
+def _insert_with_free_timestamp(
+    text: str,
+    timestamp: int,
+    embedding: np.ndarray,
+    app: str,
+    title: str,
+    max_attempts: int = 10,
+) -> Optional[int]:
+    """Insert an entry, stepping the timestamp forward past collisions.
+
+    `entries.timestamp` is UNIQUE and `insert_entry` uses ON CONFLICT DO
+    NOTHING, so with more than one monitor two captures taken in the same
+    second silently collapse into one row: the second monitor's text was
+    never searchable and its .webp sat on disk with nothing referencing it.
+    Stepping forward a second at a time keeps every capture, and the
+    templates' `<timestamp>_*` fallback still resolves the image.
+
+    Returns the timestamp actually stored, or None if no free second was
+    found within `max_attempts`.
+    """
+    for offset in range(max_attempts):
+        candidate = timestamp + offset
+        if insert_entry(text, candidate, embedding, app, title) is not None:
+            return candidate
+    return None
+
+
 def record_screenshots_thread() -> None:
     """
     Continuously records screenshots, processes them, and stores relevant data.
@@ -154,23 +181,33 @@ def record_screenshots_thread() -> None:
 
                 if not is_similar(current_screenshot, last_screenshot):
                     last_screenshots[i] = current_screenshot  # Update the last screenshot for this monitor
-                    image = Image.fromarray(current_screenshot)
-                    timestamp = int(time.time())
-                    filename = f"{timestamp}_{i}.webp" # Add monitor index to filename for uniqueness
-                    filepath = os.path.join(screenshots_path, filename)
-                    image.save(
-                        filepath,
-                        format="webp",
-                        lossless=True,
-                    )
                     text: str = extract_text_from_image(current_screenshot)
                     # Only proceed if OCR actually extracts text
                     if text.strip():
                         embedding: np.ndarray = get_embedding(text)
                         active_app_name: str = get_active_app_name() or "Unknown App"
                         active_window_title: str = get_active_window_title() or "Unknown Title"
-                        insert_entry(
-                            text, timestamp, embedding, active_app_name, active_window_title
+                        timestamp = _insert_with_free_timestamp(
+                            text,
+                            int(time.time()),
+                            embedding,
+                            active_app_name,
+                            active_window_title,
+                        )
+                        if timestamp is None:
+                            # Every candidate second was taken; drop this capture
+                            # rather than writing an image no row can point at.
+                            logger.warning(
+                                "Skipping capture for monitor %s: no free timestamp available.", i
+                            )
+                            continue
+                        image = Image.fromarray(current_screenshot)
+                        filename = f"{timestamp}_{i}.webp" # Add monitor index to filename for uniqueness
+                        filepath = os.path.join(screenshots_path, filename)
+                        image.save(
+                            filepath,
+                            format="webp",
+                            lossless=True,
                         )
         except Exception as e:
             logger.error(f"Error in screenshot recording loop: {e}", exc_info=True)

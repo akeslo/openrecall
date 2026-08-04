@@ -162,3 +162,38 @@ def test_record_loop_survives_initial_capture_failure():
         fake_time.sleep.return_value = None
         with pytest.raises(KeyboardInterrupt):
             screenshot.record_screenshots_thread()
+
+
+# ---------------------------------------------------------------------------
+# _insert_with_free_timestamp
+# ---------------------------------------------------------------------------
+
+def test_insert_with_free_timestamp_uses_first_second_when_free():
+    with mock.patch("openrecall.screenshot.insert_entry", return_value=1) as insert:
+        result = screenshot._insert_with_free_timestamp(
+            "text", 1000, np.zeros(3), "App", "Title"
+        )
+    assert result == 1000
+    assert insert.call_count == 1
+
+
+def test_insert_with_free_timestamp_steps_past_a_collision():
+    # Two monitors changing in the same second collide on the UNIQUE timestamp
+    # column; insert_entry returns None for the loser, which must not be lost.
+    with mock.patch(
+        "openrecall.screenshot.insert_entry", side_effect=[None, 7]
+    ) as insert:
+        result = screenshot._insert_with_free_timestamp(
+            "text", 1000, np.zeros(3), "App", "Title"
+        )
+    assert result == 1001
+    assert insert.call_count == 2
+
+
+def test_insert_with_free_timestamp_gives_up_after_max_attempts():
+    with mock.patch("openrecall.screenshot.insert_entry", return_value=None) as insert:
+        result = screenshot._insert_with_free_timestamp(
+            "text", 1000, np.zeros(3), "App", "Title", max_attempts=3
+        )
+    assert result is None
+    assert insert.call_count == 3

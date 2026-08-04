@@ -48,6 +48,22 @@ def test_human_readable_time_days_ago():
         assert utils.human_readable_time(timestamp) == "4 days ago"
 
 
+def test_human_readable_time_single_day_is_singular():
+    now = datetime.datetime(2026, 1, 2, 12, 0, 0)
+    timestamp = int(datetime.datetime(2026, 1, 1, 12, 0, 0).timestamp())
+    with mock.patch("openrecall.utils.datetime.datetime", _fixed_now(now)):
+        assert utils.human_readable_time(timestamp) == "1 day ago"
+
+
+def test_human_readable_time_future_timestamp_is_not_hours_ago():
+    # Clock skew or a DST shift can put a stored timestamp slightly ahead of
+    # now; the timedelta then normalizes to days=-1 with a large .seconds.
+    now = datetime.datetime(2026, 1, 1, 12, 0, 0)
+    timestamp = int(datetime.datetime(2026, 1, 1, 12, 5, 0).timestamp())
+    with mock.patch("openrecall.utils.datetime.datetime", _fixed_now(now)):
+        assert utils.human_readable_time(timestamp) == "just now"
+
+
 # ---------------------------------------------------------------------------
 # timestamp_to_human_readable
 # ---------------------------------------------------------------------------
