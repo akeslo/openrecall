@@ -110,6 +110,14 @@ def serve_image(filename):
 
 
 if __name__ == "__main__":
+    # Configure logging once, at the entry point. Library modules only ever
+    # call getLogger(__name__); without this, every logger.info() below the
+    # WARNING threshold of the root logger's last-resort handler is dropped.
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
     create_db()
 
     logger.info(f"Appdata folder: {appdata_folder}")
