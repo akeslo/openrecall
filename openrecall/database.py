@@ -155,3 +155,26 @@ def insert_entry(
         # More specific error handling can be added (e.g., IntegrityError for UNIQUE constraint)
         logger.error(f"Database error during insertion: {e}")
     return last_row_id
+
+
+def delete_entry(entry_id: int) -> bool:
+    """
+    Deletes a single entry from the database by id.
+
+    Args:
+        entry_id (int): The id of the entry to delete.
+
+    Returns:
+        bool: True if a row was deleted, False if no matching row existed
+              or an error occurred.
+    """
+    deleted = False
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM entries WHERE id = ?", (entry_id,))
+            conn.commit()
+            deleted = cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Database error during deletion of entry {entry_id}: {e}")
+    return deleted

@@ -5,10 +5,10 @@ from glob import glob
 from threading import Thread
 
 import numpy as np
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from openrecall.config import appdata_folder, screenshots_path
-from openrecall.database import create_db, get_all_entries, get_timestamps
+from openrecall.database import create_db, delete_entry, get_all_entries, get_timestamps
 from openrecall.nlp import cosine_similarity, get_embedding
 from openrecall.screenshot import record_screenshots_thread
 from openrecall.utils import human_readable_time, timestamp_to_human_readable
@@ -75,6 +75,18 @@ def search():
         # Log the error and return empty results on failure
         logger.error(f"Error during search for query '{q}': {e}")
         return render_template("search_results.html", entries=[]), 500
+
+
+@app.route("/entry/<int:entry_id>", methods=["DELETE"])
+def delete_entry_route(entry_id):
+    try:
+        deleted = delete_entry(entry_id)
+        if not deleted:
+            return jsonify({"error": "Entry not found"}), 404
+        return jsonify({"success": True})
+    except Exception as e:
+        logger.error(f"Error deleting entry {entry_id}: {e}")
+        return jsonify({"error": "Deletion failed"}), 500
 
 
 def _monitor_fallback(filename):

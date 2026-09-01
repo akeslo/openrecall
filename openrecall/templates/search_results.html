@@ -4,10 +4,11 @@
         <div class="row">
             {% for entry in entries %}
                 <div class="col-md-3 mb-4">
-                    <div class="card">
+                    <div class="card" id="entry-{{ entry['id'] }}">
                         <a href="#" data-toggle="modal" data-target="#modal-{{ loop.index0 }}">
                             <img src="/static/{{ entry['timestamp'] }}_0.webp" alt="Image" class="card-img-top">
                         </a>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteEntry({{ entry['id'] }})">Delete</button>
                     </div>
                 </div>
                 <div class="modal fade" id="modal-{{ loop.index0 }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -22,4 +23,24 @@
             {% endfor %}
         </div>
     </div>
+    <script>
+        function deleteEntry(entryId) {
+            if (!confirm("Delete this capture? This cannot be undone.")) {
+                return;
+            }
+            fetch(`/entry/${entryId}`, { method: "DELETE" })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error("Delete failed");
+                    }
+                    const card = document.getElementById(`entry-${entryId}`);
+                    if (card) {
+                        card.closest(".col-md-3").remove();
+                    }
+                })
+                .catch(() => {
+                    alert("Failed to delete this capture.");
+                });
+        }
+    </script>
 {% endblock %}
