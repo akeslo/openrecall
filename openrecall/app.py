@@ -80,9 +80,22 @@ def search():
 @app.route("/entry/<int:entry_id>", methods=["DELETE"])
 def delete_entry_route(entry_id):
     try:
-        deleted = delete_entry(entry_id)
-        if not deleted:
+        timestamp = delete_entry(entry_id)
+        if timestamp is None:
             return jsonify({"error": "Entry not found"}), 404
+
+        # delete_entry() only removes the DB row. Without this, every
+        # deleted entry leaves its <timestamp>_*.webp capture(s) behind on
+        # disk forever — the opposite of what README's "Full Control Over
+        # Storage" claim promises, and exactly the kind of leftover file
+        # _monitor_fallback() above would then start serving as a stand-in
+        # for a "deleted" entry on a future request.
+        for path in glob(os.path.join(screenshots_path, f"{timestamp}_*.webp")):
+            try:
+                os.remove(path)
+            except OSError as e:
+                logger.warning(f"Could not remove screenshot file '{path}': {e}")
+
         return jsonify({"success": True})
     except Exception as e:
         logger.error(f"Error deleting entry {entry_id}: {e}")

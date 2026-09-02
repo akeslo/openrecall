@@ -157,7 +157,7 @@ def insert_entry(
     return last_row_id
 
 
-def delete_entry(entry_id: int) -> bool:
+def delete_entry(entry_id: int) -> Optional[int]:
     """
     Deletes a single entry from the database by id.
 
@@ -165,16 +165,24 @@ def delete_entry(entry_id: int) -> bool:
         entry_id (int): The id of the entry to delete.
 
     Returns:
-        bool: True if a row was deleted, False if no matching row existed
-              or an error occurred.
+        Optional[int]: The deleted row's timestamp if a row was deleted,
+                       or None if no matching row existed or an error
+                       occurred. The caller uses the timestamp to also
+                       remove the entry's screenshot file(s) from disk —
+                       this function only touches the database.
     """
-    deleted = False
+    deleted_timestamp: Optional[int] = None
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
+            cursor.execute("SELECT timestamp FROM entries WHERE id = ?", (entry_id,))
+            row = cursor.fetchone()
+            if row is None:
+                return None
             cursor.execute("DELETE FROM entries WHERE id = ?", (entry_id,))
             conn.commit()
-            deleted = cursor.rowcount > 0
+            if cursor.rowcount > 0:
+                deleted_timestamp = row[0]
     except sqlite3.Error as e:
         logger.error(f"Database error during deletion of entry {entry_id}: {e}")
-    return deleted
+    return deleted_timestamp
