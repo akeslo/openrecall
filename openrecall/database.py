@@ -116,6 +116,29 @@ def get_timestamps() -> List[int]:
     return timestamps
 
 
+def get_id_timestamp_pairs() -> List[Tuple[int, int]]:
+    """
+    Retrieves (id, timestamp) pairs for all entries, ordered descending by
+    timestamp — the same ordering as get_timestamps(), but including the row
+    id so a caller (the timeline view) can offer per-entry deletion without
+    loading every embedding via get_all_entries().
+
+    Returns:
+        List[Tuple[int, int]]: A list of (id, timestamp) pairs.
+                                Returns an empty list if the table is empty or
+                                an error occurs.
+    """
+    pairs: List[Tuple[int, int]] = []
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, timestamp FROM entries ORDER BY timestamp DESC")
+            pairs = [(row[0], row[1]) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        logger.error(f"Database error while fetching id/timestamp pairs: {e}")
+    return pairs
+
+
 def insert_entry(
     text: str, timestamp: int, embedding: np.ndarray, app: str, title: str
 ) -> Optional[int]:

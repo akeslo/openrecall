@@ -1,32 +1,74 @@
 {% extends "base.html" %}
 {% block content %}
-{% if timestamps|length > 0 %}
+{% if entries|length > 0 %}
   <div class="container">
     <div class="slider-container">
-      <input type="range" class="slider custom-range" id="discreteSlider" min="0" max="{{timestamps|length - 1}}" step="1" value="{{timestamps|length - 1}}">
+      <input type="range" class="slider custom-range" id="discreteSlider" min="0" max="{{entries|length - 1}}" step="1" value="{{entries|length - 1}}">
       <div class="slider-value" id="sliderValue"></div>
     </div>
     <div class="image-container">
-      <img id="timestampImage" src="/static/{{timestamps[0]}}_0.webp" alt="Image for timestamp">
+      <img id="timestampImage" src="/static/{{entries[0][1]}}_0.webp" alt="Image for timestamp">
+      <div>
+        <button type="button" class="btn btn-sm btn-danger mt-2" id="deleteCurrentEntry">Delete</button>
+      </div>
     </div>
   </div>
   <script>
-    const timestamps = {{ timestamps|tojson }};
+    // entries are [id, timestamp] pairs, newest first (same ordering the
+    // server queries in). The slider stays oldest-to-newest left-to-right,
+    // so index lookups are reversed exactly as they were when this only
+    // carried timestamps.
+    let entries = {{ entries|tojson }};
     const slider = document.getElementById('discreteSlider');
     const sliderValue = document.getElementById('sliderValue');
     const timestampImage = document.getElementById('timestampImage');
+    const deleteButton = document.getElementById('deleteCurrentEntry');
 
-    slider.addEventListener('input', function() {
-      const reversedIndex = timestamps.length - 1 - slider.value;
-      const timestamp = timestamps[reversedIndex];
-      sliderValue.textContent = new Date(timestamp * 1000).toLocaleString();  // Convert to human-readable format
+    function currentEntry() {
+      const reversedIndex = entries.length - 1 - slider.value;
+      return entries[reversedIndex];
+    }
+
+    function renderCurrent() {
+      const [, timestamp] = currentEntry();
+      sliderValue.textContent = new Date(timestamp * 1000).toLocaleString();
       timestampImage.src = `/static/${timestamp}_0.webp`;
+    }
+
+    slider.addEventListener('input', renderCurrent);
+
+    deleteButton.addEventListener('click', function() {
+      if (entries.length === 0) {
+        return;
+      }
+      const [entryId] = currentEntry();
+      if (!confirm("Delete this capture? This cannot be undone.")) {
+        return;
+      }
+      fetch(`/entry/${entryId}`, { method: "DELETE" })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Delete failed");
+          }
+          entries = entries.filter(([id]) => id !== entryId);
+          if (entries.length === 0) {
+            location.reload();
+            return;
+          }
+          slider.max = entries.length - 1;
+          if (slider.value > slider.max) {
+            slider.value = slider.max;
+          }
+          renderCurrent();
+        })
+        .catch(() => {
+          alert("Failed to delete this capture.");
+        });
     });
 
     // Initialize the slider with a default value
-    slider.value = timestamps.length - 1;
-    sliderValue.textContent = new Date(timestamps[0] * 1000).toLocaleString();  // Convert to human-readable format
-    timestampImage.src = `/static/${timestamps[0]}_0.webp`;
+    slider.value = entries.length - 1;
+    renderCurrent();
   </script>
 {% else %}
   <div class="container">

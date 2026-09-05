@@ -8,7 +8,13 @@ import numpy as np
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from openrecall.config import appdata_folder, screenshots_path
-from openrecall.database import create_db, delete_entry, get_all_entries, get_timestamps
+from openrecall.database import (
+    create_db,
+    delete_entry,
+    get_all_entries,
+    get_id_timestamp_pairs,
+    get_timestamps,
+)
 from openrecall.nlp import cosine_similarity, get_embedding
 from openrecall.screenshot import record_screenshots_thread
 from openrecall.utils import human_readable_time, timestamp_to_human_readable
@@ -30,12 +36,15 @@ app.jinja_env.filters["timestamp_to_human_readable"] = timestamp_to_human_readab
 @app.route("/")
 def timeline():
     try:
-        # connect to db
-        timestamps = get_timestamps()
-        return render_template("timeline.html", timestamps=timestamps)
+        # (id, timestamp) pairs, newest first — the id is what lets the
+        # timeline offer per-entry delete (added alongside search's delete
+        # button, see delete_entry_route below) without loading every
+        # embedding the way get_all_entries() does.
+        entries = get_id_timestamp_pairs()
+        return render_template("timeline.html", entries=entries)
     except Exception as e:
         logger.error(f"Error fetching timeline: {e}")
-        return render_template("timeline.html", timestamps=[]), 500
+        return render_template("timeline.html", entries=[]), 500
 
 
 @app.route("/search")

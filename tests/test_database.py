@@ -21,6 +21,7 @@ with patch('openrecall.config.db_path', mock_db_path):
         create_db,
         insert_entry,
         get_all_entries,
+        get_id_timestamp_pairs,
         get_timestamps,
         Entry,
     )
@@ -205,6 +206,27 @@ class TestDatabase(unittest.TestCase):
         entries = get_all_entries()
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0].text, "Good")
+
+    def test_get_id_timestamp_pairs_empty(self):
+        """Test getting id/timestamp pairs from an empty database."""
+        pairs = get_id_timestamp_pairs()
+        self.assertEqual(pairs, [])
+
+    def test_get_id_timestamp_pairs_multiple(self):
+        """Pairs must carry the real row id and be ordered by timestamp DESC,
+        matching get_timestamps()'s ordering — this is what lets the timeline
+        view offer per-entry delete without loading every embedding."""
+        ts1 = int(time.time())
+        ts2 = ts1 + 10
+        ts3 = ts1 - 10
+        emb = np.array([0.1] * 5, dtype=np.float32)
+
+        id1 = insert_entry("T1", ts1, emb, "A1", "T1")
+        id2 = insert_entry("T2", ts2, emb, "A2", "T2")
+        id3 = insert_entry("T3", ts3, emb, "A3", "T3")
+
+        pairs = get_id_timestamp_pairs()
+        self.assertEqual(pairs, [(id2, ts2), (id1, ts1), (id3, ts3)])
 
     def test_get_all_entries_skips_empty_embedding(self):
         """An empty embedding blob must be skipped rather than returned."""

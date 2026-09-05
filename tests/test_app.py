@@ -30,21 +30,23 @@ def client():
 # ---------------------------------------------------------------------------
 
 def test_timeline_renders_timestamps(client):
-    with mock.patch.object(app_module, "get_timestamps", return_value=[1700000000]):
+    with mock.patch.object(
+        app_module, "get_id_timestamp_pairs", return_value=[(1, 1700000000)]
+    ):
         response = client.get("/")
     assert response.status_code == 200
     assert b"1700000000" in response.data
 
 
 def test_timeline_with_no_entries_still_renders(client):
-    with mock.patch.object(app_module, "get_timestamps", return_value=[]):
+    with mock.patch.object(app_module, "get_id_timestamp_pairs", return_value=[]):
         response = client.get("/")
     assert response.status_code == 200
 
 
 def test_timeline_returns_500_when_lookup_fails(client):
     with mock.patch.object(
-        app_module, "get_timestamps", side_effect=RuntimeError("db down")
+        app_module, "get_id_timestamp_pairs", side_effect=RuntimeError("db down")
     ):
         response = client.get("/")
     assert response.status_code == 500
