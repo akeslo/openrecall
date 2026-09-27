@@ -181,33 +181,45 @@ def record_screenshots_thread() -> None:
 
                 if not is_similar(current_screenshot, last_screenshot):
                     last_screenshots[i] = current_screenshot  # Update the last screenshot for this monitor
-                    text: str = extract_text_from_image(current_screenshot)
-                    # Only proceed if OCR actually extracts text
-                    if text.strip():
-                        embedding: np.ndarray = get_embedding(text)
-                        active_app_name: str = get_active_app_name() or "Unknown App"
-                        active_window_title: str = get_active_window_title() or "Unknown Title"
-                        timestamp = _insert_with_free_timestamp(
-                            text,
-                            int(time.time()),
-                            embedding,
-                            active_app_name,
-                            active_window_title,
-                        )
-                        if timestamp is None:
-                            # Every candidate second was taken; drop this capture
-                            # rather than writing an image no row can point at.
-                            logger.warning(
-                                "Skipping capture for monitor %s: no free timestamp available.", i
+                    # Per-monitor: extract_text_from_image() (doctr) or
+                    # get_embedding() can raise on a single bad frame. Without
+                    # this try/except, that exception propagates out of the
+                    # whole `for i, current_screenshot in enumerate(...)` loop
+                    # and the outer handler below catches it — which drops
+                    # every *other* monitor's capture for this cycle too, not
+                    # just the one that failed OCR/embedding.
+                    try:
+                        text: str = extract_text_from_image(current_screenshot)
+                        # Only proceed if OCR actually extracts text
+                        if text.strip():
+                            embedding: np.ndarray = get_embedding(text)
+                            active_app_name: str = get_active_app_name() or "Unknown App"
+                            active_window_title: str = get_active_window_title() or "Unknown Title"
+                            timestamp = _insert_with_free_timestamp(
+                                text,
+                                int(time.time()),
+                                embedding,
+                                active_app_name,
+                                active_window_title,
                             )
-                            continue
-                        image = Image.fromarray(current_screenshot)
-                        filename = f"{timestamp}_{i}.webp" # Add monitor index to filename for uniqueness
-                        filepath = os.path.join(screenshots_path, filename)
-                        image.save(
-                            filepath,
-                            format="webp",
-                            lossless=True,
+                            if timestamp is None:
+                                # Every candidate second was taken; drop this capture
+                                # rather than writing an image no row can point at.
+                                logger.warning(
+                                    "Skipping capture for monitor %s: no free timestamp available.", i
+                                )
+                                continue
+                            image = Image.fromarray(current_screenshot)
+                            filename = f"{timestamp}_{i}.webp" # Add monitor index to filename for uniqueness
+                            filepath = os.path.join(screenshots_path, filename)
+                            image.save(
+                                filepath,
+                                format="webp",
+                                lossless=True,
+                            )
+                    except Exception as e:
+                        logger.error(
+                            "Error processing capture for monitor %s: %s", i, e, exc_info=True
                         )
         except Exception as e:
             logger.error(f"Error in screenshot recording loop: {e}", exc_info=True)
