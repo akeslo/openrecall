@@ -56,7 +56,7 @@
             return;
           }
           slider.max = entries.length - 1;
-          if (slider.value > slider.max) {
+          if (Number(slider.value) > Number(slider.max)) {
             slider.value = slider.max;
           }
           renderCurrent();
