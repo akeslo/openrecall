@@ -18,7 +18,17 @@ parser.add_argument(
     default=False,
 )
 
-args = parser.parse_args()
+
+# parse_known_args(), not parse_args(): this module is imported by every other
+# module in the package (app.py, screenshot.py) as a side effect of their own
+# imports, so anything that imports openrecall.* — a notebook, a REPL, a
+# script, a future test module that imports before tests/conftest.py's
+# sys.argv patch runs — hands argparse its own unrelated argv. parse_args()
+# raises SystemExit on the first flag it doesn't recognize (pytest's `-q`,
+# Jupyter's `--f=<connection file>`, etc.); parse_known_args() ignores what it
+# doesn't recognize and keeps --storage-path/--primary-monitor-only working
+# for real CLI invocations.
+args, _unknown_args = parser.parse_known_args()
 
 
 def get_appdata_folder(app_name="openrecall"):
